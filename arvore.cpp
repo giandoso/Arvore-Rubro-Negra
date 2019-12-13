@@ -48,7 +48,7 @@ void Arvore::Insere(int valor) {
     if (!Busca(valor)) {
         No *n = new No(valor, true, NULL); // Insere nó rubro, a principio sem pai
         qtde++;
-        raiz->Insere(raiz, NULL, n);
+        raiz = raiz->Insere(raiz, NULL, n);
     }
 }
 
@@ -79,10 +79,8 @@ No::~No() {
 
 }
 
-// retorna true se tio de n é rubro
-
 bool tio_eh_rubro(No *n) {
-    No * avo = n->pai->pai;
+    No * avo = n->pai;
     if (n->dado > avo->dado) {
         // neto a direita, tio a esquerda do avo        
         return !avo->esq ? false : avo->esq->rubro;
@@ -108,85 +106,93 @@ bool filho_eh_rubro(No *n, int lado) { // 1 = dir 2 = esq
 // e de seus filhos para preto
 
 void troca_cor(No *n) {
-    No * avo = n->pai;
-    avo->rubro = true;
-    avo->dir->rubro = false;
-    avo->esq->rubro = false;
+    n->rubro = n->pai ? true : false;
+    n->dir->rubro = false;
+    n->esq->rubro = false;
+}
 
-    if (avo->pai == NULL) { // estou na raiz da arvore
-        avo->rubro = false;
-    }
+void troca_cor_rotacao(No *n) {
+    n->rubro = false;
+    n->dir->rubro = true;
+    n->esq->rubro = true;
 }
 
 // acessar https://www.geeksforgeeks.org/c-program-red-black-tree-insertion/
 // para visualizar imagens com nomes dos nós e visualização da rotação
 
-void aplica_rotacao(No *p) {
-    No * g = p->pai;
-    No * x = p->esq->rubro ? p->esq : p->dir;
+No * aplica_rotacao(No *g) {
+    No * p = g->esq ? g->esq : g->dir;
+    No * x = p->esq ? p->esq : p->dir;
     if (p->dado < g->dado) {
         if (x->dado < p->dado) {
             // rotação_dir (left left)
-//            if(g->pai == NULL){ // rotação na raiz
-//                
-//                
-//            }else{
-//                
-//            }
             No * t3 = p->dir ? p->dir : NULL;
             p->dir = g;
+
+            p->pai = g->pai ? g->pai : NULL;
             g->pai = p;
+
             g->esq = t3;
             if (t3)
                 t3->pai = g;
-            // troca_cor_rotacao()
+
+            return p;
         } else {
             // rotação esq dir (left right)
-            // t2 = x->esq
-            // t3 = x->dir
-            // 
-            // x->esq = p
-            // p->pai = x
-            // 
-            // x->dir = g
-            // g->pai = x
-            // 
-            // p->dir = t2
-            // t2->pai = p
-            //
-            // g->esq = t3
-            // t3->pai = g
-            // troca_cor_rotacao()
+            No * t2 = x->esq ? x->esq : NULL;
+            No * t3 = x->dir ? x->dir : NULL;
+
+            x->pai = g->pai ? g->pai : NULL;
+
+            x->esq = p;
+            p->pai = x;
+
+            x->dir = g;
+            g->pai = x;
+
+            p->dir = t2;
+            if (t2)
+                t2->pai = p;
+
+            g->esq = t3;
+            if (t3)
+                t3->pai = g;
+            return x;
         }
     } else {
         if (x->dado < p->dado) {
             // rotação dir esq
-            // t3 = x->esq
-            // t4 = x->dir
-            //
-            // x->esq = g
-            // g->pai = x
-            //
-            // x->dir = p
-            // p->pai = x
-            //
-            // g->dir = t3
-            // t3->pai = g
-            //
-            // p->esq = t4
-            // t4->pai = g
-            // troca_cor_rotacao()
+            No * t3 = x->esq ? x->esq : NULL;
+            No * t4 = x->dir ? x->dir : NULL;
 
-        } else {
+            x->pai = g->pai ? g->pai : NULL;
+            
+            x->esq = g;
+            g->pai = x;
+
+            x->dir = p;
+            p->pai = x;
+
+            g->dir = t3;
+            if (t3)
+                t3->pai = g;
+
+            p->esq = t4;
+            if (t4)
+                t4->pai = g;
+            return x;            
+            } else {
             // rotação esq (right right)
-            // t3 = p->esq
-            //
-            // p->esq = g
-            // g->pai = p
-            //
-            // g->dir = aux
-            // aux->pai = g
-            // troca_cor_rotacao()
+            No * t3 = p->esq ? p->esq : NULL;
+            p->esq = g;
+
+            p->pai = g->pai ? g->pai : NULL;
+            g->pai = p;
+
+            g->dir = t3;
+            if (t3)
+                t3->pai = g;
+            return p;
         }
     }
 }
@@ -202,18 +208,28 @@ No * No::Insere(No *curr, No *prev, No * n) {
         curr->dir = Insere(curr->dir, curr, n);
 
 
-    if ((curr->rubro && (filho_eh_rubro(curr, 1) || filho_eh_rubro(curr, 2))) == true) {
-        if (tio_eh_rubro(n)) {
-            // troca cor
-            troca_cor(curr); //troca a cor do avô e filhos
-            cout << "Troca cor" << endl;
-
-        } else {
-            // rotação
-            aplica_rotacao(curr);
-            cout << "Rotação" << endl;
+    if (curr->dado > n->dado) {
+        // treta pra esquerda
+        if (curr->esq->rubro && (filho_eh_rubro(curr->esq, 1) || filho_eh_rubro(curr->esq, 2))) {
+            if (tio_eh_rubro(curr->esq)) {
+                troca_cor(curr);
+            } else {
+                curr = aplica_rotacao(curr);
+                troca_cor_rotacao(curr);
+            }
+        }
+    } else {
+        // treta pra direita
+        if (curr->dir->rubro && (filho_eh_rubro(curr->dir, 1) || filho_eh_rubro(curr->dir, 2))) {
+            if (tio_eh_rubro(curr->dir)) {
+                troca_cor(curr);
+            } else {
+                curr = aplica_rotacao(curr);
+                troca_cor_rotacao(curr);
+            }
         }
     }
+
     return curr;
 }
 

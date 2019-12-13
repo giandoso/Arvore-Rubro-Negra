@@ -29,9 +29,14 @@ int main(int argc, char** argv) {
     //Controle de arquivo (Abrindo arquivo e fazendo sua leitura)
     int control = 1; // 0 for test read file, 1 for manual insertion
     if (control) {
+        arv->Insere(5);
+        arv->Insere(8);
+        arv->Insere(7);
         arv->Insere(3);
-        arv->Insere(2);
-        arv->Insere(1);
+        arv->Insere(13);
+        arv->Insere(21);
+        arv->Insere(17);
+        arv->Insere(17);
         
         //cout << arv->Busca(16) << " ";
         //arv->Insere(99);
