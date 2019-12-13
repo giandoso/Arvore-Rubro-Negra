@@ -12,7 +12,7 @@
 #include"arvore.h"
 
 using namespace std;
-
+int rotacao;
 Arvore::Arvore() {
     raiz = NULL;
     qtde = 0;
@@ -34,22 +34,146 @@ void Arvore::Em_Ordem() {
     raiz->Em_Ordem(raiz);
 }
 
+void atualiza_altura(No * n) {
+    int alt1 = n->esq ? n->esq->altura : 0;
+    int alt2 = n->dir ? n->dir->altura : 0;
+    n->altura = alt1 > alt2 ? alt1 + 1 : alt2 + 1;
+}
+void pre_ordem_altura(No *n) {
+    if (n) {
+        pre_ordem_altura(n->esq);
+        pre_ordem_altura(n->dir);
+        atualiza_altura(n);
+    }
+}
 void Arvore::Estado() {
     //TODO
+    int qtdf = raiz->QtdFolhas(raiz);
+    cout << "_____________________________________________________" << endl;
+    cout << endl << "Estado da arvore:" << endl << endl;
+        cout << "Folhas                             : " << qtdf << endl;
+    pre_ordem_altura(raiz);
+    cout << "Nivel maximo                       : " << raiz->altura << endl;
+    cout << "Nivel medio(maximo/2)              : " << raiz->altura / 2 << endl;
+    cout << "Nos intermediarios(excluso a raiz) : " << (qtde - qtdf - 1) << endl;
+    cout << "Rotacoes : " << rotacao << endl;
+    cout << "_____________________________________________________" << endl;
 }
 
 void Arvore::Insere(int valor) {
     if (qtde == 0) {
-        No *n = new No(valor, false, NULL); // primeiro nó, pai nulo e negro
+        No *n = new No(valor); // primeiro nó, pai nulo e negro
+        n->cor = 2;
         raiz = n;
         qtde++;
         return;
     }
     if (!Busca(valor)) {
-        No *n = new No(valor, true, NULL); // Insere nó rubro, a principio sem pai
+        No *n = new No(valor); // Insere nó rubro, a principio sem pai
         qtde++;
-        raiz = raiz->Insere(raiz, NULL, n);
+        raiz = raiz->Insere(raiz, n);
+        CorrigeInsercao(n);
     }
+}
+int Arvore::getColor(No *n) {
+    if (n == NULL)
+        return 2;
+
+    return n->cor;
+}
+
+void Arvore::setColor(No *n, int cor) {
+    if (n == NULL)
+        return;
+
+    n->cor = cor;
+}
+
+void Arvore::RotacaoEsq(No *n) {
+    No *dir_child = n->dir;
+    n->dir = dir_child->esq;
+
+    if (n->dir != NULL)
+        n->dir->pai = n;
+
+    dir_child->pai = n->pai;
+
+    if (n->pai == NULL)
+        raiz = dir_child;
+    else if (n == n->pai->esq)
+        n->pai->esq = dir_child;
+    else
+        n->pai->dir = dir_child;
+
+    dir_child->esq = n;
+    n->pai = dir_child;
+    rotacao++;
+}
+
+void Arvore::RotacaoDir(No *n) {
+    No *esq_child = n->esq;
+    n->esq = esq_child->dir;
+
+    if (n->esq != NULL)
+        n->esq->pai = n;
+
+    esq_child->pai = n->pai;
+
+    if (n->pai == NULL)
+        raiz = esq_child;
+    else if (n == n->pai->esq)
+        n->pai->esq = esq_child;
+    else
+        n->pai->dir = esq_child;
+
+    esq_child->dir = n;
+    n->pai = esq_child;
+    rotacao++;
+}
+
+void Arvore::CorrigeInsercao(No* n){
+    No *pai = NULL;
+    No *avo = NULL;
+    while (n != raiz && getColor(n) == 1 && getColor(n->pai) == 1) {
+        pai = n->pai;
+        avo = pai->pai;
+        if (pai == avo->esq) {
+            No *tio = avo->dir;
+            if (getColor(tio) == 1) {
+                setColor(tio, 2);
+                setColor(pai, 2);
+                setColor(avo, 1);
+                n = avo;
+            } else {
+                if (n == pai->dir) {
+                    RotacaoEsq(pai);
+                    n = pai;
+                    pai = n->pai;
+                }
+                RotacaoDir(avo);
+                swap(pai->cor, avo->cor);
+                n = pai;
+            }
+        } else {
+            No *tio = avo->esq;
+            if (getColor(tio) == 1) {
+                setColor(tio, 2);
+                setColor(pai, 2);
+                setColor(avo, 1);
+                n = avo;
+            } else {
+                if (n == pai->esq) {
+                    RotacaoDir(pai);
+                    n = pai;
+                    pai = n->pai;
+                }
+                RotacaoEsq(avo);
+                swap(pai->cor, avo->cor);
+                n = pai;
+            }
+        }
+    }
+    setColor(raiz, 2);
 }
 
 bool Arvore::Busca(int valor) {
@@ -58,179 +182,169 @@ bool Arvore::Busca(int valor) {
 
 bool Arvore::Remove(int valor) {
     if (raiz->Busca(valor, raiz)) {
-        return raiz->Remove(valor, raiz, NULL);
+        No *n = raiz->Remove(raiz, valor);
+        
+        CorrigirRemocao(n);
+        return true;
     }
     return false;
+}
+
+void Arvore::CorrigirRemocao(No *n) {
+    if (n == NULL)
+        return;
+
+    if (n == raiz) {
+        raiz = NULL;
+        return;
+    }
+
+    if (getColor(n) == 1 || getColor(n->esq) == 1 || getColor(n->dir) == 1) {
+        No *child = n->esq != NULL ? n->esq : n->dir;
+
+        if (n == n->pai->esq) {
+            n->pai->esq = child;
+            if (child != NULL)
+                child->pai = n->pai;
+            setColor(child, 2);
+            delete (n);
+        } else {
+            n->pai->dir = child;
+            if (child != NULL)
+                child->pai = n->pai;
+            setColor(child, 2);
+            delete (n);
+        }
+    } else {
+        No *irmao = NULL;
+        No *pai = NULL;
+        No *ptr = n;
+        setColor(ptr, 3);
+        while (ptr != raiz && getColor(ptr) == 3) {
+            pai = ptr->pai;
+            if (ptr == pai->esq) {
+                irmao = pai->dir;
+                if (getColor(irmao) == 1) {
+                    setColor(irmao, 2);
+                    setColor(pai, 1);
+                    RotacaoEsq(pai);
+                } else {
+                    if (getColor(irmao->esq) == 2 && getColor(irmao->dir) == 2) {
+                        setColor(irmao, 1);
+                        if(getColor(pai) == 1)
+                            setColor(pai, 2);
+                        else
+                            setColor(pai, 3);
+                        ptr = pai;
+                    } else {
+                        if (getColor(irmao->dir) == 2) {
+                            setColor(irmao->esq, 2);
+                            setColor(irmao, 1);
+                            RotacaoDir(irmao);
+                            irmao = pai->dir;
+                        }
+                        setColor(irmao, pai->cor);
+                        setColor(pai, 2);
+                        setColor(irmao->dir, 2);
+                        RotacaoEsq(pai);
+                        break;
+                    }
+                }
+            } else {
+                irmao = pai->esq;
+                if (getColor(irmao) == 1) {
+                    setColor(irmao, 2);
+                    setColor(pai, 1);
+                    RotacaoDir(pai);
+                } else {
+                    if (getColor(irmao->esq) == 2 && getColor(irmao->dir) == 2) {
+                        setColor(irmao, 1);
+                        if (getColor(pai) == 1)
+                            setColor(pai, 2);
+                        else
+                            setColor(pai, 3);
+                        ptr = pai;
+                    } else {
+                        if (getColor(irmao->esq) == 2) {
+                            setColor(irmao->dir, 2);
+                            setColor(irmao, 1);
+                            RotacaoEsq(irmao);
+                            irmao = pai->esq;
+                        }
+                        setColor(irmao, pai->cor);
+                        setColor(pai, 2);
+                        setColor(irmao->esq, 2);
+                        RotacaoDir(pai);
+                        break;
+                    }
+                }
+            }
+        }
+        if (n == n->pai->esq)
+            n->pai->esq = NULL;
+        else
+            n->pai->dir = NULL;
+        delete(n);
+        setColor(raiz, 2);
+    }
 }
 
 No * Arvore::Captura_Maximo() {
     return raiz->Captura_Maximo(raiz);
 }
 
-No::No(int valor, bool rubro, No *pai) {
+No::No(int valor) {
     this->dado = valor;
-    this->rubro = rubro;
+    this->cor = 1;
     this->esq = NULL;
     this->dir = NULL;
-    this->pai = pai;
+    this->pai = NULL;
 }
 
 No::~No() {
 
 }
 
-bool tio_eh_rubro(No *n) {
-    No * avo = n->pai;
-    if (n->dado > avo->dado) {
-        // neto a direita, tio a esquerda do avo        
-        return !avo->esq ? false : avo->esq->rubro;
-    } else {
-        // neto a esquerda, tio a direita do avo
-        return !avo->dir ? false : avo->dir->rubro;
-    }
-}
-
-// retorna true se filho eh rubro com base no lado \/
-
-bool filho_eh_rubro(No *n, int lado) { // 1 = dir 2 = esq
-    if (lado == 1) {
-        //esq
-        return !n->dir ? false : n->dir->rubro;
-    } else {
-        //dir
-        return !n->esq ? false : n->esq->rubro;
-    }
-}
-
-// realiza a troca de cor do avo para vermelho
-// e de seus filhos para preto
-
-void troca_cor(No *n) {
-    n->rubro = n->pai ? true : false;
-    n->dir->rubro = false;
-    n->esq->rubro = false;
-}
-
-void troca_cor_rotacao(No *n) {
-    n->rubro = false;
-    n->dir->rubro = true;
-    n->esq->rubro = true;
-}
-
-// acessar https://www.geeksforgeeks.org/c-program-red-black-tree-insertion/
-// para visualizar imagens com nomes dos nós e visualização da rotação
-
-No * aplica_rotacao(No *g) {
-    No * p = g->esq ? g->esq : g->dir;
-    No * x = p->esq ? p->esq : p->dir;
-    if (p->dado < g->dado) {
-        if (x->dado < p->dado) {
-            // rotação_dir (left left)
-            No * t3 = p->dir ? p->dir : NULL;
-            p->dir = g;
-
-            p->pai = g->pai ? g->pai : NULL;
-            g->pai = p;
-
-            g->esq = t3;
-            if (t3)
-                t3->pai = g;
-
-            return p;
-        } else {
-            // rotação esq dir (left right)
-            No * t2 = x->esq ? x->esq : NULL;
-            No * t3 = x->dir ? x->dir : NULL;
-
-            x->pai = g->pai ? g->pai : NULL;
-
-            x->esq = p;
-            p->pai = x;
-
-            x->dir = g;
-            g->pai = x;
-
-            p->dir = t2;
-            if (t2)
-                t2->pai = p;
-
-            g->esq = t3;
-            if (t3)
-                t3->pai = g;
-            return x;
-        }
-    } else {
-        if (x->dado < p->dado) {
-            // rotação dir esq
-            No * t3 = x->esq ? x->esq : NULL;
-            No * t4 = x->dir ? x->dir : NULL;
-
-            x->pai = g->pai ? g->pai : NULL;
-            
-            x->esq = g;
-            g->pai = x;
-
-            x->dir = p;
-            p->pai = x;
-
-            g->dir = t3;
-            if (t3)
-                t3->pai = g;
-
-            p->esq = t4;
-            if (t4)
-                t4->pai = g;
-            return x;            
-            } else {
-            // rotação esq (right right)
-            No * t3 = p->esq ? p->esq : NULL;
-            p->esq = g;
-
-            p->pai = g->pai ? g->pai : NULL;
-            g->pai = p;
-
-            g->dir = t3;
-            if (t3)
-                t3->pai = g;
-            return p;
-        }
-    }
-}
-
-No * No::Insere(No *curr, No *prev, No * n) {
-    if (curr == NULL) {
-        n->pai = prev;
-        return n;
-    }
-    if (curr->dado > n->dado)
-        curr->esq = Insere(curr->esq, curr, n);
+int No::QtdFolhas(No *n)  
+{  
+    if(n == NULL)      
+        return 0;  
+    if(n->esq == NULL && n->dir == NULL)  
+        return 1;          
     else
-        curr->dir = Insere(curr->dir, curr, n);
+        return QtdFolhas(n->esq)+  
+            QtdFolhas(n->dir);  
+}  
 
-
-    if (curr->dado > n->dado) {
-        // treta pra esquerda
-        if (curr->esq->rubro && (filho_eh_rubro(curr->esq, 1) || filho_eh_rubro(curr->esq, 2))) {
-            if (tio_eh_rubro(curr->esq)) {
-                troca_cor(curr);
-            } else {
-                curr = aplica_rotacao(curr);
-                troca_cor_rotacao(curr);
-            }
-        }
-    } else {
-        // treta pra direita
-        if (curr->dir->rubro && (filho_eh_rubro(curr->dir, 1) || filho_eh_rubro(curr->dir, 2))) {
-            if (tio_eh_rubro(curr->dir)) {
-                troca_cor(curr);
-            } else {
-                curr = aplica_rotacao(curr);
-                troca_cor_rotacao(curr);
-            }
-        }
+No * No::Insere(No *raiz, No * n) {
+    if(!raiz) return n;
+    if (n->dado < raiz->dado) {
+        raiz->esq = Insere(raiz->esq, n);
+        raiz->esq->pai = raiz;
+    } else if (n->dado > raiz->dado) {
+        raiz->dir = Insere(raiz->dir, n);
+        raiz->dir->pai = raiz;
     }
+    return raiz;
+}
 
-    return curr;
+
+No* No::Remove(No *raiz, int dado) {
+    if (raiz == NULL)
+        return raiz;
+
+    if (dado < raiz->dado)
+        return Remove(raiz->esq, dado);
+
+    if (dado > raiz->dado)
+        return Remove(raiz->dir, dado);
+
+    if (raiz->esq == NULL || raiz->dir == NULL)
+        return raiz;
+
+    No *temp = Captura_Maximo(raiz->esq);
+    raiz->dado = temp->dado;
+    return Remove(raiz->esq, temp->dado);
 }
 
 void No::Estado(No *raiz) {
@@ -281,67 +395,6 @@ No *No::Captura_Maximo(No* raiz) {
         //        return Captura_Maximo(raiz->esq, maior);
     }
 
-}
-
-bool No::Remove(int valor, No *raiz, No *pai) {
-    if (raiz == NULL) {
-        return false;
-    }
-    if (valor == raiz->dado) {
-        No *aux = raiz;
-        if (raiz->esq == NULL || raiz->dir == NULL) {
-            //delete one child
-            if (raiz->esq == NULL && raiz->dir == NULL) {
-                // nao tem filho
-                if (raiz->dado > pai->dado) {
-                    // filho dir
-                    pai->dir = NULL;
-                    free(raiz);
-                } else {
-                    // filho esq
-                    pai->esq = NULL;
-                    free(raiz);
-                }
-                return true;
-            } else if (raiz->dir == NULL) {
-                // tem um filho a esquerda
-                if (raiz->dado > pai->dado) {
-                    // filho dir
-                    pai->dir = raiz->esq;
-                    free(raiz);
-                } else {
-                    // filho esq
-                    pai->esq = raiz->esq;
-                    free(raiz);
-                }
-                return true;
-            } else if (raiz->esq == NULL) {
-                // tem um filho a direita
-                if (raiz->dado > pai->dado) {
-                    // filho dir
-                    pai->dir = raiz->dir;
-                    free(raiz);
-                } else {
-                    // filho esq
-                    pai->esq = raiz->dir;
-                    free(raiz);
-                }
-                return true;
-            }
-        } else {
-            //TODO problema qdo no for raiz da arv
-            // tem dois filhos
-            aux = Captura_Maximo(raiz->esq); // TEM QUE VE ESSA PORRA
-            raiz->dado = aux->dado;
-            raiz->esq->Remove(aux->dado, raiz->esq, raiz);
-            free(aux);
-            return true;
-        }
-    } else if (valor < raiz->dado) {
-        return Remove(valor, raiz->esq, raiz);
-    } else {
-        return Remove(valor, raiz->dir, raiz);
-    }
 }
 
 

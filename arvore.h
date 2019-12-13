@@ -21,18 +21,18 @@ using namespace std;
 
 class No { //Nó da Árvore
 public:
-    No(int valor, bool rubro, No *pai); //Construtor
+    No(int valor); //Construtor
     ~No(); //Destrutor
     void Pre_Ordem(No *raiz);
     void Pos_Ordem(No *raiz);
     void Em_Ordem(No *raiz);
+    int QtdFolhas(No *raiz);
     bool Busca(int valor, No *raiz);
     No *Captura_Maximo(No *raiz);
     void Estado(No *raiz);
-    bool Remove(int valor, No *raiz, No *pai);
-    No *Insere(No *curr, No *prev, No *n);
-    int dado;
-    bool rubro;
+    No *Remove( No *raiz, int valor);
+    No *Insere(No *raiz, No *n);
+    int dado, cor, altura; //cores = 1 red, 2 black, 3 doubleblack
     No *esq, *dir, *pai;
 };
 
@@ -45,9 +45,15 @@ public:
     void Em_Ordem();
     void Insere(int valor);
     bool Busca(int valor);
+    void CorrigeInsercao(No *n);
+    int getColor(No *n);
+    void RotacaoEsq(No *n);
+    void RotacaoDir(No *n);
+    void setColor(No *n, int cor);
     void Estado();
     bool Remove(int valor);
     No *Captura_Maximo();
+    void CorrigirRemocao(No *n);
     No *raiz;
     int qtde;
 };

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     Arvore *arv = new Arvore;
 
     //Controle de arquivo (Abrindo arquivo e fazendo sua leitura)
-    int control = 1; // 0 for test read file, 1 for manual insertion
+    int control = 0; // 0 for test read file, 1 for manual insertion
     if (control) {
         arv->Insere(5);
         arv->Insere(8);
@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
         arv->Insere(21);
         arv->Insere(17);
         arv->Insere(17);
-        
+        arv->Remove(5);
+        arv->Remove(7);
         //cout << arv->Busca(16) << " ";
         //arv->Insere(99);
     } else {
@@ -48,7 +49,7 @@ int main(int argc, char** argv) {
         char op;
         int valor;
 
-        status = readFile(dados, "arquivo.txt");
+        status = readFile(dados, "arquivo2.txt");
         //Teste de abertura de arquivo
         if (!status) {
             cout << "Arquivo não pode ser aberto para leitura." << endl;
@@ -98,11 +99,16 @@ int main(int argc, char** argv) {
                         break;
                     }
                     case 'e':
-                    {//TODO
+                    { // estado
+                        arv->Estado();
+                        cout << endl;
+                        dados >> op;
                         break;
                     }
                     case 'f':
-                    {//TODO
+                    {
+                        cout << endl << "Fim de operação" << endl << endl;
+                        return 0;
                         break;
                     }
                     default:
@@ -119,6 +125,7 @@ int main(int argc, char** argv) {
     arv->Pre_Ordem();
     cout << endl << endl << "Arvore em Pós-Ordem: " << endl;
     arv->Pos_Ordem();
+    arv->Estado();
     cout << endl;
     return 0;
 }
